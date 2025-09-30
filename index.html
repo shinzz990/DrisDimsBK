@@ -11,8 +11,6 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
     }
     
     body {
@@ -25,18 +23,14 @@
       height: 100vh;
       font-family: 'Press Start 2P', cursive;
       overflow: hidden;
-      position: fixed;
-      width: 100%;
-      height: 100%;
     }
     
     #gameContainer {
       position: relative;
       width: 100%;
-      height: 100%;
       max-width: 900px;
+      height: 100%;
       max-height: 500px;
-      touch-action: none;
     }
     
     canvas {
@@ -46,8 +40,6 @@
       width: 100%;
       height: 100%;
       display: block;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
     }
     
     #mobileControls {
@@ -57,7 +49,6 @@
       left: 0;
       right: 0;
       text-align: center;
-      z-index: 10;
     }
     
     .control-btn {
@@ -75,7 +66,6 @@
       cursor: pointer;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
-      transition: transform 0.1s;
     }
     
     .control-btn:active {
@@ -117,86 +107,13 @@
       z-index: 10;
     }
     
-    /* Touch area indicators for mobile */
-    #touchArea {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 5;
-      display: none;
-    }
-    
-    .touch-indicator {
-      position: absolute;
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.3);
-      border: 2px dashed rgba(255, 255, 255, 0.6);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 24px;
-      color: rgba(0, 0, 0, 0.6);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    
-    .touch-indicator.show {
-      opacity: 1;
-    }
-    
-    #jumpIndicator {
-      bottom: 100px;
-      left: 20px;
-    }
-    
-    #duckIndicator {
-      bottom: 30px;
-      left: 20px;
-    }
-    
     @media (max-width: 768px) {
       #mobileControls {
         display: block;
       }
       
-      #touchArea {
-        display: block;
-      }
-      
       body {
-        padding: 0;
-      }
-      
-      #gameContainer {
-        max-height: 100vh;
-      }
-      
-      canvas {
-        border-width: 2px;
-      }
-      
-      .control-btn {
-        width: 60px;
-        height: 60px;
-        font-size: 20px;
-      }
-      
-      #pauseBtn, #soundBtn {
-        width: 35px;
-        height: 35px;
-        font-size: 14px;
-      }
-    }
-    
-    /* Performance optimization for mobile */
-    @media (max-width: 480px) {
-      canvas {
-        image-rendering: auto;
+        padding: 10px;
       }
     }
   </style>
@@ -210,10 +127,6 @@
       <div class="control-btn" id="jumpBtn">↑</div>
       <div class="control-btn" id="duckBtn">↓</div>
     </div>
-    <div id="touchArea">
-      <div class="touch-indicator" id="jumpIndicator">↑</div>
-      <div class="touch-indicator" id="duckIndicator">↓</div>
-    </div>
   </div>
 
   <script>
@@ -223,38 +136,39 @@
     const soundBtn = document.getElementById("soundBtn");
     const jumpBtn = document.getElementById("jumpBtn");
     const duckBtn = document.getElementById("duckBtn");
-    const touchArea = document.getElementById("touchArea");
-    const jumpIndicator = document.getElementById("jumpIndicator");
-    const duckIndicator = document.getElementById("duckIndicator");
-    
-    // Detect if mobile device
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // ================== Mobile Controls ==================
+jumpBtn.addEventListener("touchstart", function(e) {
+  e.preventDefault();
+  if (gameState === "play" && !dino.isJumping) {
+    dino.dy = dino.jumpPower;
+    dino.isJumping = true;
+    dino.isDucking = false;
+    console.log("Jump (mobile)");
+  }
+});
+
+duckBtn.addEventListener("touchstart", function(e) {
+  e.preventDefault();
+  if (gameState === "play" && !dino.isJumping) {
+    dino.isDucking = true;
+    dino.height = 30;
+  }
+});
+
+duckBtn.addEventListener("touchend", function(e) {
+  e.preventDefault();
+  if (gameState === "play") {
+    dino.isDucking = false;
+    dino.height = 60;
+  }
+});
+
     
     // Set canvas size
     function resizeCanvas() {
       const container = document.getElementById("gameContainer");
-      const containerWidth = container.clientWidth;
-      const containerHeight = container.clientHeight;
-      
-      // Maintain aspect ratio
-      const aspectRatio = 900 / 500;
-      let width, height;
-      
-      if (containerWidth / containerHeight > aspectRatio) {
-        height = containerHeight;
-        width = height * aspectRatio;
-      } else {
-        width = containerWidth;
-        height = width / aspectRatio;
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      // Adjust game elements based on new canvas size
-      if (gameState === "play" || gameState === "paused") {
-        dino.y = canvas.height - 150 - dino.height;
-      }
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
     }
     
     resizeCanvas();
@@ -269,9 +183,6 @@
     let frameCount = 0;
     let score = 0;
     let distance = 0;
-    let touchStartY = 0;
-    let touchStartTime = 0;
-    let lastTouchTime = 0;
     
     // Dino properties
     const dino = {
@@ -357,19 +268,6 @@
       loadImages();
       resetGame();
       gameLoop();
-      
-      // Show touch indicators on mobile
-      if (isMobile) {
-        setTimeout(() => {
-          jumpIndicator.classList.add('show');
-          duckIndicator.classList.add('show');
-          
-          setTimeout(() => {
-            jumpIndicator.classList.remove('show');
-            duckIndicator.classList.remove('show');
-          }, 2000);
-        }, 1000);
-      }
     }
     
     // Reset game
@@ -432,13 +330,8 @@
       
       // Draw controls info
       ctx.font = '12px "Press Start 2P"';
-      if (isMobile) {
-        ctx.fillText('Tap to Jump', canvas.width / 2, canvas.height / 2 + 80);
-        ctx.fillText('Swipe Down to Duck', canvas.width / 2, canvas.height / 2 + 100);
-      } else {
-        ctx.fillText('SPACE or ↑ to Jump', canvas.width / 2, canvas.height / 2 + 80);
-        ctx.fillText('↓ to Duck', canvas.width / 2, canvas.height / 2 + 100);
-      }
+      ctx.fillText('SPACE or ↑ to Jump', canvas.width / 2, canvas.height / 2 + 80);
+      ctx.fillText('↓ to Duck', canvas.width / 2, canvas.height / 2 + 100);
       
       // Draw animated dino
       const dinoY = canvas.height / 2 + 120 + Math.sin(frameCount * 0.05) * 10;
@@ -999,8 +892,6 @@
     // Touch controls for mobile
     document.addEventListener('touchstart', function(e) {
       e.preventDefault();
-      touchStartY = e.touches[0].clientY;
-      touchStartTime = Date.now();
       
       if (gameState === 'menu') {
         resetGame();
@@ -1008,94 +899,34 @@
       } else if (gameState === 'gameover') {
         resetGame();
         gameState = 'play';
-      } else if (gameState === 'paused') {
-        gameState = 'play';
-      }
-    });
-    
-    // Touch move for swipe detection
-    document.addEventListener('touchmove', function(e) {
-      e.preventDefault();
-    });
-    
-    // Touch end for action detection
-    document.addEventListener('touchend', function(e) {
-      e.preventDefault();
-      
-      const touchEndY = e.changedTouches[0].clientY;
-      const touchEndTime = Date.now();
-      const touchDuration = touchEndTime - touchStartTime;
-      const touchDistance = touchStartY - touchEndY;
-      
-      if (gameState === 'play') {
-        // Determine if it was a tap or swipe
-        if (touchDuration < 200 && Math.abs(touchDistance) < 30) {
-          // It's a tap - jump
-          if (!dino.isJumping) {
-            dino.dy = dino.jumpPower;
-            dino.isJumping = true;
-            dino.isDucking = false;
-            
-            // Play jump sound
-            if (soundEnabled) {
-              console.log('Jump sound');
-            }
-            
-            // Create dust particles
-            for (let i = 0; i < 5; i++) {
-              particles.push({
-                x: dino.x + dino.width / 2,
-                y: dino.y + dino.height,
-                width: 3 + Math.random() * 3,
-                height: 3 + Math.random() * 3,
-                dx: (Math.random() - 0.5) * 2,
-                dy: Math.random() * -1,
-                color: '#8B7355',
-                alpha: 0.7
-              });
-            }
+      } else if (gameState === 'play') {
+        if (!dino.isJumping) {
+          dino.dy = dino.jumpPower;
+          dino.isJumping = true;
+          dino.isDucking = false;
+          
+          // Play jump sound
+          if (soundEnabled) {
+            // In a real implementation, you would play an actual sound file
+            console.log('Jump sound');
           }
-        } else if (touchDistance > 50 && touchDuration < 300) {
-          // It's a swipe up - jump
-          if (!dino.isJumping) {
-            dino.dy = dino.jumpPower;
-            dino.isJumping = true;
-            dino.isDucking = false;
-            
-            // Play jump sound
-            if (soundEnabled) {
-              console.log('Jump sound');
-            }
-            
-            // Create dust particles
-            for (let i = 0; i < 5; i++) {
-              particles.push({
-                x: dino.x + dino.width / 2,
-                y: dino.y + dino.height,
-                width: 3 + Math.random() * 3,
-                height: 3 + Math.random() * 3,
-                dx: (Math.random() - 0.5) * 2,
-                dy: Math.random() * -1,
-                color: '#8B7355',
-                alpha: 0.7
-              });
-            }
-          }
-        } else if (touchDistance < -50 && touchDuration < 300) {
-          // It's a swipe down - duck
-          if (!dino.isJumping) {
-            dino.isDucking = true;
-            dino.height = 30;
-            
-            // Reset ducking after a short time
-            setTimeout(() => {
-              if (gameState === 'play') {
-                dino.isDucking = false;
-                dino.height = 60;
-              }
-            }, 500);
+          
+          // Create dust particles
+          for (let i = 0; i < 5; i++) {
+            particles.push({
+              x: dino.x + dino.width / 2,
+              y: dino.y + dino.height,
+              width: 3 + Math.random() * 3,
+              height: 3 + Math.random() * 3,
+              dx: (Math.random() - 0.5) * 2,
+              dy: Math.random() * -1,
+              color: '#8B7355',
+              alpha: 0.7
+            });
           }
         }
+      } else if (gameState === 'paused') {
+        gameState = 'play';
       }
     });
     
@@ -1110,6 +941,7 @@
         
         // Play jump sound
         if (soundEnabled) {
+          // In a real implementation, you would play an actual sound file
           console.log('Jump sound');
         }
         
@@ -1161,11 +993,6 @@
       soundEnabled = !soundEnabled;
       soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
     });
-    
-    // Prevent scrolling on mobile
-    document.body.addEventListener('touchmove', function(e) {
-      e.preventDefault();
-    }, { passive: false });
     
     // Initialize game
     init();
