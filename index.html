@@ -151,6 +151,7 @@ duckBtn.addEventListener("touchstart", function(e) {
   e.preventDefault();
   if (gameState === "play" && !dino.isJumping) {
     dino.isDucking = true;
+    dino.isJumping = false;
     dino.height = 30;
   }
 });
