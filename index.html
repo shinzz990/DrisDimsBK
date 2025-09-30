@@ -137,32 +137,24 @@
     const jumpBtn = document.getElementById("jumpBtn");
     const duckBtn = document.getElementById("duckBtn");
     // ================== Mobile Controls ==================
-jumpBtn.addEventListener("touchstart", function(e) {
-  e.preventDefault();
-  if (gameState === "play" && !dino.isJumping) {
-    dino.dy = dino.jumpPower;
-    dino.isJumping = true;
-    dino.isDucking = false;
-    console.log("Jump (mobile)");
-  }
-});
-
 duckBtn.addEventListener("touchstart", function(e) {
   e.preventDefault();
+  e.stopPropagation(); // cegah ikut trigger canvas jump
   if (gameState === "play" && !dino.isJumping) {
     dino.isDucking = true;
-    dino.isJumping = false;
     dino.height = 30;
   }
 });
 
 duckBtn.addEventListener("touchend", function(e) {
   e.preventDefault();
+  e.stopPropagation(); // cegah ikut trigger canvas jump
   if (gameState === "play") {
     dino.isDucking = false;
     dino.height = 60;
   }
 });
+
 
     
     // Set canvas size
